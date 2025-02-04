@@ -49,31 +49,29 @@ func (bs *BigleS) run() {
 	defer ticker.Stop()
 
 	for time.Since(startTime) < bs.timer {
+		<-ticker.C
+		//протечка воды в корпус корабля
+		bs.waterlevel++
+
+		//занесение значение датчика уровния с определенной дескритизацией и ошибкой датчика
+		sensor_level = bs.waterlevel/1000 + sensorError
+		if bs.waterlevel == 2500 && predWatelewel < bs.waterlevel {
+			sensorError = rand.Intn(10)
+			go log.Println("sensorError:", sensorError)
+		}
+		if bs.waterlevel == 90000 {
+			close(bs.shipSank)
+		}
+
+		//обновление значения датчика уровня воды
 		select {
-		case <-ticker.C:
-			//протечка воды в корпус корабля
-			bs.waterlevel++
-
-			//занесение значение датчика уровния с определенной дескритизацией и ошибкой датчика
-			sensor_level = bs.waterlevel/1000 + sensorError
-			if bs.waterlevel == 2500 && predWatelewel < bs.waterlevel {
-				sensorError = rand.Intn(10)
-				go log.Println("sensorError:", sensorError)
-			}
-			if bs.waterlevel == 90000 {
-				close(bs.shipSank)
-			}
-
-			//обновление значения датчика уровня воды
-			select {
-			case <-bs.level:
-			default:
-			}
-			bs.level <- sensor_level
-
-			predWatelewel = bs.waterlevel
+		case <-bs.level:
 		default:
 		}
+		bs.level <- sensor_level
+
+		predWatelewel = bs.waterlevel
+
 	}
 
 	close(bs.quit)
@@ -86,34 +84,30 @@ func (bs *BigleS) pumpWorker() {
 	ticker := time.NewTicker(time.Microsecond * 2) // Тикер для постоянных обновлений
 	defer ticker.Stop()
 	for {
+		<-ticker.C
 		select {
-		case <-ticker.C:
-			select {
-			case val := <-bs.pumpControl:
-				if val != mode && val == 1 {
-					delta = 300
-				}
-				mode = val
-			default:
+		case val := <-bs.pumpControl:
+			if val != mode && val == 1 {
+				delta = 300
 			}
-			if mode == 1 {
-				if delta > 1 {
-					delta /= 2
-					bs.pumpConsumedEnergy += delta
-				}
-				bs.waterlevel--
-				bs.pumpConsumedEnergy++
-
-				if bs.waterlevel < 20 {
-					lowtime++
-				}
-				if lowtime > 100 {
-					log.Println("Pump Brakes")
-					return
-				}
-			}
+			mode = val
 		default:
+		}
+		if mode == 1 {
+			if delta > 1 {
+				delta /= 2
+				bs.pumpConsumedEnergy += delta
+			}
+			bs.waterlevel--
+			bs.pumpConsumedEnergy++
 
+			if bs.waterlevel < 20 {
+				lowtime++
+			}
+			if lowtime > 100 {
+				log.Println("Pump Brakes")
+				return
+			}
 		}
 
 	}
