@@ -24,7 +24,6 @@ func GetShipSubsystems(TimerSeconds int) (Ship, Pump, WaterLevelSensor) {
 		pumpControl: make(chan int, 1),
 		timer:       time.Second * time.Duration(TimerSeconds),
 	}
-
 	go bs.run()
 	go bs.pumpWorker()
 
@@ -54,7 +53,7 @@ func (bs *BigleS) run() {
 		sensor_level = bs.waterlevel/1000 + sensorError
 		if bs.waterlevel == 25000 && predWatelewel < bs.waterlevel {
 			sensorError = 40 - rand.Intn(80) //генерация случайной ошибки датчика
-			go log.Println("sensorError:", sensorError)
+			// go log.Println("sensorError:", sensorError)
 		}
 		if bs.waterlevel == 90000 {
 			close(bs.shipSank)
@@ -65,12 +64,10 @@ func (bs *BigleS) run() {
 		case <-bs.level:
 		default:
 		}
+
 		bs.level <- sensor_level
-
 		predWatelewel = bs.waterlevel
-
 	}
-
 	close(bs.quit)
 }
 func (bs *BigleS) pumpWorker() {
@@ -109,7 +106,6 @@ func (bs *BigleS) pumpWorker() {
 				return
 			}
 		}
-
 	}
 }
 
