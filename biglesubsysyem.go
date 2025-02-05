@@ -16,9 +16,6 @@ type BigleS struct {
 	pumpConsumedEnergy int
 }
 
-// var bs *BigleS
-// var _ Ship = (*BigleS)(nil)
-
 func GetShipSubsystems(TimerSeconds int) (Ship, Pump, WaterLevelSensor) {
 	bs := &BigleS{
 		level:       make(chan int, 1),
