@@ -16,11 +16,11 @@ type BigleS struct {
 	pumpConsumedEnergy int
 }
 
-var bs *BigleS
-var _ Ship = (*BigleS)(nil)
+// var bs *BigleS
+// var _ Ship = (*BigleS)(nil)
 
 func GetShipSubsystems(TimerSeconds int) (Ship, Pump, WaterLevelSensor) {
-	bs = &BigleS{
+	bs := &BigleS{
 		level:       make(chan int, 1),
 		quit:        make(chan struct{}, 1),
 		shipSank:    make(chan struct{}, 1),
@@ -45,7 +45,7 @@ func (bs *BigleS) run() {
 	predWatelewel := bs.waterlevel
 	startTime := time.Now()
 	var sensor_level int
-	ticker := time.NewTicker(time.Microsecond * 10) // Тикер для постоянных обновлений
+	ticker := time.NewTicker(time.Microsecond * 10) // Тикер интервала эмуляции протечки 10 микросекунд
 	defer ticker.Stop()
 
 	for time.Since(startTime) < bs.timer {
@@ -55,8 +55,8 @@ func (bs *BigleS) run() {
 
 		//занесение значение датчика уровния с определенной дескритизацией и ошибкой датчика
 		sensor_level = bs.waterlevel/1000 + sensorError
-		if bs.waterlevel == 2500 && predWatelewel < bs.waterlevel {
-			sensorError = rand.Intn(10)
+		if bs.waterlevel == 25000 && predWatelewel < bs.waterlevel {
+			sensorError = 40 - rand.Intn(80) //генерация случайной ошибки датчика
 			go log.Println("sensorError:", sensorError)
 		}
 		if bs.waterlevel == 90000 {
@@ -81,16 +81,19 @@ func (bs *BigleS) pumpWorker() {
 	var mode int
 	var delta int
 	lowtime := 0
-	ticker := time.NewTicker(time.Microsecond * 2) // Тикер для постоянных обновлений
+	ticker := time.NewTicker(time.Microsecond * 2) // Тикер насоса с интервалом 2 микросекунды откачки воды
 	defer ticker.Stop()
+
 	for {
 		<-ticker.C
 		select {
 		case val := <-bs.pumpControl:
 			if val != mode && val == 1 {
-				delta = 300
+				delta = 5000
 			}
 			mode = val
+		case <-bs.quit:
+			return
 		default:
 		}
 		if mode == 1 {
